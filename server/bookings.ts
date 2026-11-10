@@ -192,6 +192,44 @@ export async function cancelBooking(id: number, actor: 'customer' | 'owner' | 's
   return booking(id);
 }
 
+// ---------- Move / extend (Schedule drag, assistant) ----------
+
+const DAY_MS = 86_400_000;
+const shortDate = (iso: string) => new Date(iso).toISOString().slice(0, 16).replace('T', ' ');
+
+/**
+ * Moves or extends a held booking. The PayPal hold is not changed, so the new dates must fit it:
+ * inside the hold's validity, and the new rental fee must leave at least half of the deposit covered.
+ */
+export function moveBooking(id: number, startISO: string, endISO: string, actor: 'owner' | 'agent' = 'owner') {
+  const s = Date.parse(startISO), e = Date.parse(endISO);
+  if (Number.isNaN(s) || Number.isNaN(e) || e <= s) throw new HttpError(400, 'End must be after start');
+  const start = new Date(s).toISOString(), end = new Date(e).toISOString();
+  return tx(() => {
+    const b = booking(id);
+    if (b.is_sample) throw new HttpError(409, 'Sample bookings are read-only');
+    if (b.state === 'pending_approval') throw new HttpError(409, 'Waiting for PayPal approval. The booking can move once the hold is placed');
+    if (!['authorized', 'picked_up'].includes(b.state)) throw new HttpError(409, 'Returned, settled and cancelled bookings are read-only');
+    if (b.state === 'picked_up' && s !== Date.parse(b.start_at)) throw new HttpError(409, 'The item is already picked up, so only the end date can change');
+    if (e - s > MAX_DAYS * DAY_MS) throw new HttpError(409, `A booking is at most ${MAX_DAYS} days`);
+    if (e < Date.now()) throw new HttpError(409, 'The new end is in the past');
+    if (b.hold_expires_at && e > Date.parse(b.hold_expires_at)) throw new HttpError(409, `The PayPal hold is valid until ${shortDate(b.hold_expires_at)} UTC. The booking must end before that`);
+    const clash = overlaps(b.item_id, start, end, b.id);
+    if (clash.length) throw new HttpError(409, `Overlaps ${clash[0].code} on the same item`);
+    const fee = rentalFee(item(b.item_id).daily_fee_cents, start, end);
+    const covered = b.authorized_cents - fee;
+    if (covered < Math.ceil(b.deposit_cents / 2)) {
+      throw new HttpError(409, `The new rental fee ${fmt(fee)} would leave only ${fmt(Math.max(0, covered))} of the ${fmt(b.deposit_cents)} deposit inside the ${fmt(b.authorized_cents)} hold. At least half must stay covered`);
+    }
+    if (start === b.start_at && end === b.end_at) return b;
+    run('UPDATE bookings SET start_at = ?, end_at = ?, fee_cents = ? WHERE id = ?', start, end, fee, id);
+    logEvent(id, 'booking.moved', actor,
+      `${b.code} ${s === Date.parse(b.start_at) ? 'extended' : 'moved'} to ${shortDate(start)} – ${shortDate(end)} UTC. Rental fee ${fmt(b.fee_cents)} → ${fmt(fee)}; the PayPal hold (${fmt(b.authorized_cents)}) is unchanged.`,
+      { from: { start: b.start_at, end: b.end_at, fee_cents: b.fee_cents }, to: { start, end, fee_cents: fee } });
+    return booking(id);
+  });
+}
+
 // ---------- Photos ----------
 
 export function samplesDir(slug: string, set: string) {

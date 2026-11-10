@@ -191,6 +191,11 @@ const notSample = (bid: number) => {
   return bid;
 };
 
+api.patch('/shop/bookings/:id', wrap((req) => {
+  const body = z.object({ start: z.iso.datetime(), end: z.iso.datetime() }).parse(req.body);
+  return B.bookingDetail(B.moveBooking(id(req), body.start, body.end, 'owner').id);
+}));
+
 api.post('/shop/bookings/:id/cancel', wrap(async (req) => B.bookingDetail((await B.cancelBooking(notSample(id(req)), 'owner', 'Cancelled by the shop')).id)));
 
 api.post('/shop/bookings/:id/photos', upload.array('photos', 5), wrap(async (req) => {
