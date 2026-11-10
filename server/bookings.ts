@@ -145,6 +145,9 @@ export async function authorizeBooking(id: number, actor: 'customer' | 'paypal' 
   const { auth, order: ord } = await authorizeOrder(b.order_id, `${reqKey(b)}-auth`);
   const cents = fromPayPal(auth.amount.value);
   b = booking(id);
+  // A parallel call (the return page and the webhook, or a double load) may have finished first.
+  // PayPal gave both the same authorization (same request id), so the booking is already held.
+  if (HELD_STATES.includes(b.state) || b.authorization_id) return b;
   if (b.state === 'expired' || b.state === 'cancelled') {
     // Late approval: authorize only if the slot is still free, otherwise void at once.
     const clash = overlaps(b.item_id, b.start_at, b.end_at, b.id).length > 0;
