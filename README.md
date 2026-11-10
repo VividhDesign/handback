@@ -27,6 +27,7 @@ Handback turns the deposit into a PayPal **authorization hold**, photographs the
 | Payments v2: reauthorize | Implemented; see Limitations for what the sandbox allows inside the honor period | `server/paypal/payments.ts` |
 | Payments v2: refund | Contest resolution refunds part or all of the captured charges (never the rental fee) | `server/paypal/payments.ts`, `server/agent/contest.ts` |
 | Webhooks + signature verification | Every event is verified with `verify-webhook-signature`, stored once by event id, and shown in the live ledger | `server/paypal/webhooks.ts`, `server/sync.ts` |
+| Invoicing via the **PayPal Agent Toolkit** (`@paypal/agent-toolkit`, tools `create_invoice` + `send_invoice`) | Approved charges above the hold: the agent drafts an invoice with the evidence link; it is sent only after the owner's click. The tool arguments are built by code from the approved amount, never by the model. One invoice per booking | `server/paypal/toolkit.ts`, `server/agent/invoice.ts` |
 | `PayPal-Request-Id` | Every write call carries a stable request id, so a retry or double click never charges twice | `server/paypal/client.ts` |
 
 Every PayPal id (order, authorization, capture, refund) and every `debug_id` on an error is shown in the UI.

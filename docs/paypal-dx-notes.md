@@ -28,5 +28,17 @@ Sandbox runs (approval-session results) are added below as they happen.
 | 6 | Logging in to checkout as the seller | Sandbox run | Clear page: "You are logging into the account of the seller"; the buyer must be the Personal sandbox account | Cost: one retry |
 | 7 | Network blips while polling an order | Our script | A 5xx or fetch failure while waiting for approval must be retried, not treated as failure | Cost: a resume mode (`--resume`) |
 
+## Agent Toolkit and hosted webhooks, 10 Nov
+
+| # | Question | Source | Answer quality | Time |
+|---|---|---|---|---|
+| 8 | Which Agent Toolkit entry point fits a server that must not let a model choose amounts? | `@paypal/agent-toolkit` 1.11.0 package exports | The `./openai` export has `handleToolCall`, which runs one named tool with JSON arguments; no model or AI SDK is needed at call time. Its own deps (ai, zod 3) install nested, no clash with ours | Saved: deterministic tool calls with the official toolkit |
+| 9 | What do `create_invoice` / `send_invoice` return? | Sandbox run | Links, not objects: create gives `{rel:"self", href:".../invoices/INV2-..."}`, send gives the payer-view link. The invoice id has to be parsed from the link | Small: one regex |
+| 10 | How does the toolkit report errors? | Sandbox run | No throw: the tool result is `{ok:false, status, code, message}`. We turn it into an error ourselves | Small |
+| 11 | Authorize / capture / void in the toolkit? | Package tool list | Not there. With every action turned on, 1.11.0 lists invoices, products, subscriptions, shipment tracking, orders (`create_order`, `get_order`, `pay_order`), disputes and transactions, so the hold lifecycle stays direct REST | None |
+| 12 | Do webhooks reach the hosted app? | Hosted run on Render | Yes: after voiding a pooled hold, `PAYMENT.AUTHORIZATION.VOIDED` arrived and passed `verify-webhook-signature`. The free instance restarts with an empty DB, so older events drop out of our ledger (PayPal still has them) | Note: a restart loses ledger history, not money state |
+
+Sandbox invoice test: two parallel "send" clicks gave one sent invoice and one 409; a later call returned the same invoice.
+
 ## Non-PayPal note (AI provider), 10 Nov
 - Gemini free tier is per model and small (gemini-2.5-flash: 20 requests/day, 5/min). A model fallback chain kept the demo working. Not a PayPal issue; recorded so the comparison with PayPal sandbox limits is fair (the PayPal sandbox had no such limits in our use).
