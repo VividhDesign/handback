@@ -7,14 +7,18 @@ import { env } from '../env.ts';
  * definitions plus `handleToolCall`, which runs the tool against PayPal. The toolkit has no
  * authorize, capture or void tools, so those stay direct REST (server/paypal/payments.ts).
  */
+const ACTIONS = { invoices: { create: true, send: true, get: true }, payments: { createRefund: true, getRefunds: true } };
 let tk: PayPalAgentToolkit | null = null;
 
-export function toolkit(): PayPalAgentToolkit {
-  tk ??= new PayPalAgentToolkit({
-    clientId: env.PAYPAL_CLIENT_ID,
-    clientSecret: env.PAYPAL_CLIENT_SECRET,
-    configuration: { actions: { invoices: { create: true, send: true, get: true } }, context: { sandbox: true } },
-  });
+/**
+ * The toolkit sends `PayPal-Request-Id` only from its `context.request_id`, so a write that must be
+ * idempotent (a refund) gets its own toolkit instance carrying that id. Reads share one instance.
+ */
+export function toolkit(requestId?: string): PayPalAgentToolkit {
+  const make = (context: Record<string, unknown>) =>
+    new PayPalAgentToolkit({ clientId: env.PAYPAL_CLIENT_ID, clientSecret: env.PAYPAL_CLIENT_SECRET, configuration: { actions: ACTIONS, context: { sandbox: true, ...context } } as any });
+  if (requestId) return make({ request_id: requestId });
+  tk ??= make({});
   return tk;
 }
 
@@ -27,8 +31,8 @@ export class ToolError extends Error {
 }
 
 /** Runs one toolkit tool and returns its parsed JSON. Errors come back as `{ ok: false, ... }`. */
-export async function callTool<T = any>(name: string, args: Record<string, unknown>): Promise<T> {
-  const msg = await toolkit().handleToolCall({ id: `call_${randomUUID()}`, type: 'function', function: { name, arguments: JSON.stringify(args) } });
+export async function callTool<T = any>(name: string, args: Record<string, unknown>, opts: { requestId?: string } = {}): Promise<T> {
+  const msg = await toolkit(opts.requestId).handleToolCall({ id: `call_${randomUUID()}`, type: 'function', function: { name, arguments: JSON.stringify(args) } });
   const text = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
   let body: any;
   try {

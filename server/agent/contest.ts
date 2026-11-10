@@ -3,9 +3,9 @@ import { all, get, run, tx, nowISO, type Row } from '../db.ts';
 import { env, hasGemini } from '../env.ts';
 import { logEvent } from '../lib/events.ts';
 import { HttpError } from '../lib/ids.ts';
-import { fmt, fromPayPal } from '../lib/money.ts';
+import { fmt, fromPayPal, toPayPal } from '../lib/money.ts';
 import { boundRefund } from '../pricing/settle.ts';
-import { refundCapture } from '../paypal/payments.ts';
+import { callTool, ToolError } from '../paypal/toolkit.ts';
 import { assertTransition } from '../lib/states.ts';
 import { generateJson, modelChain } from '../ai/provider.ts';
 import { booking, rateCard } from '../bookings.ts';
@@ -94,15 +94,25 @@ export async function resolveContest(contestId: number, input: { action: 'uphold
   if (cents <= 0) throw new HttpError(400, 'Nothing to refund');
   const reqId = `hb-${b.code}-refund-${contestId}`;
   const note = `Refund for contest on ${b.code}${input.note ? `: ${input.note}` : ''}`;
-  // TODO(B8.7): route through the Agent Toolkit create_refund tool once the toolkit path is chosen; this is the direct REST fallback.
-  const refund = await refundCapture(b.capture_id, cents, note, reqId);
+  // PayPal Agent Toolkit `create_refund`. The amount is the owner's bounded decision, built by code, never by
+  // the model. The request id makes a retry or a double click return the same refund.
+  let refund: any;
+  try {
+    refund = await callTool('create_refund', { capture_id: b.capture_id, amount: { currency_code: 'USD', value: toPayPal(cents) }, note_to_payer: note.slice(0, 255) }, { requestId: reqId });
+  } catch (err) {
+    // PayPal answers 409 while the same request id is still in flight (a parallel click): that one refunds.
+    if ((err as ToolError).status === 409) throw new HttpError(409, 'This refund is already being processed. Refresh in a moment.');
+    throw new HttpError(502, `PayPal refund failed: ${(err as Error).message}. Nothing was refunded; try again.`);
+  }
+  if (!refund?.id) throw new HttpError(502, 'PayPal refund answered without a refund id. Check the ledger before trying again.');
   tx(() => {
+    // A parallel click got the same refund from PayPal (same request id); only the first one records it.
+    if (run("UPDATE contests SET state = ?, refund_cents = ?, resolved_at = ? WHERE id = ? AND state = 'open'", input.action === 'uphold' ? 'upheld' : 'partial', cents, nowISO(), contestId).changes !== 1) return;
     run(`INSERT INTO payments (booking_id, kind, paypal_id, status, amount_cents, request_id, raw_json, via, created_at) VALUES (?,?,?,?,?,?,?,?,?)
-         ON CONFLICT(request_id) DO UPDATE SET status = excluded.status`, b.id, 'refund', refund.id, refund.status, fromPayPal(refund.amount?.value ?? '0'), reqId, JSON.stringify(refund), 'rest_fallback', nowISO());
-    run("UPDATE contests SET state = ?, refund_cents = ?, resolved_at = ? WHERE id = ?", input.action === 'uphold' ? 'upheld' : 'partial', cents, nowISO(), contestId);
+         ON CONFLICT(request_id) DO UPDATE SET status = excluded.status`, b.id, 'refund', refund.id, refund.status, fromPayPal(refund.amount?.value ?? toPayPal(cents)), reqId, JSON.stringify(refund), 'agent_toolkit', nowISO());
     assertTransition(b.state, 'refunded');
-    run("UPDATE bookings SET state = 'refunded', refunded_cents = refunded_cents + ? WHERE id = ?", cents, b.id);
-    logEvent(b.id, 'paypal.refund', 'agent', `paypal.refund ${fmt(cents)} (refund ${refund.id}, ${refund.status}, direct API fallback)`);
+    run("UPDATE bookings SET state = 'refunded', refunded_cents = refunded_cents + ? WHERE id = ? AND state = 'contested'", cents, b.id);
+    logEvent(b.id, 'paypal.refund', 'agent', `paypal.refund ${fmt(cents)} (refund ${refund.id}, ${refund.status}, Agent Toolkit create_refund)`, { refund_id: refund.id });
   });
   return booking(b.id);
 }

@@ -38,6 +38,11 @@ Sandbox runs (approval-session results) are added below as they happen.
 | 11 | Authorize / capture / void in the toolkit? | Package tool list | Not there. With every action turned on, 1.11.0 lists invoices, products, subscriptions, shipment tracking, orders (`create_order`, `get_order`, `pay_order`), disputes and transactions, so the hold lifecycle stays direct REST | None |
 | 12 | Do webhooks reach the hosted app? | Hosted run on Render | Yes: after voiding a pooled hold, `PAYMENT.AUTHORIZATION.VOIDED` arrived and passed `verify-webhook-signature`. The free instance restarts with an empty DB, so older events drop out of our ledger (PayPal still has them) | Note: a restart loses ledger history, not money state |
 
+| 13 | Does the toolkit's `create_refund` send `PayPal-Request-Id`? | Package source (`getHeaders`) | Only from `context.request_id`, which is fixed per toolkit instance; tool arguments cannot carry it. We create one toolkit instance per refund with its own request id | Cost: easy to miss; without it a retry could refund twice |
+| 14 | Same request id, two refund calls | Sandbox run | One after the other: the same refund id comes back. At the same moment: the second gets 409 "A previous request on this resource is currently in progress". Both are safe; we show the 409 as "already being processed" | Saved: no locking of our own needed at PayPal's side |
+| 15 | Is `page_size` on the event list limited? | Sandbox run | Yes, at most 100 (400 above it); the docs page lists only the default (10) | Small |
+| 16 | Can the event list rebuild our ledger after a restart? | Sandbox + hosted run | Yes: `GET /v1/notifications/webhooks-events` with `start_time`/`end_time` returned all 27 events of S1 with their resources. The hosted app restores them on boot, labeled "restored" | Saved: no paid disk needed for the ledger |
+
 Sandbox invoice test: two parallel "send" clicks gave one sent invoice and one 409; a later call returned the same invoice.
 
 ## Non-PayPal note (AI provider), 10 Nov
