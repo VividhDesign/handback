@@ -28,6 +28,13 @@ export function rateCard(): RateCard {
   return r ? { ...DEFAULT_RATE_CARD, ...JSON.parse(r.value) } : DEFAULT_RATE_CARD;
 }
 
+/**
+ * Prefix for every PayPal-Request-Id of a booking. The code alone repeats across databases (a fresh
+ * Render disk, a local DB), and PayPal would answer a repeated id with the old order or capture, so
+ * the booking's random token is part of the key.
+ */
+export const reqKey = (b: Record<string, any>) => `hb-${b.code}-${b.public_token.slice(0, 10)}`;
+
 export function booking(id: number): Row {
   const b = get('SELECT * FROM bookings WHERE id = ?', id);
   if (!b) throw new HttpError(404, 'Booking not found');
@@ -114,11 +121,11 @@ export async function createBooking(input: { itemId: number; start: string; end:
     const o = await createAuthorizeOrder({
       code: b.code, invoiceId: `${b.code}-${b.public_token.slice(0, 8)}`, itemName: it.name, days: q.days, feeCents: q.feeCents, depositCents: q.depositCents,
       returnUrl: `${input.baseUrl}/paypal/return?b=${b.public_token}`, cancelUrl: `${input.baseUrl}/paypal/cancel?b=${b.public_token}`,
-      requestId: `hb-${b.code}-order-1`,
+      requestId: `${reqKey(b)}-order-1`,
     });
     tx(() => {
       run('UPDATE bookings SET order_id = ?, approve_url = ? WHERE id = ?', o.orderId, o.approveUrl ?? null, b.id);
-      recordPayment(b.id, 'order', `hb-${b.code}-order-1`, { id: o.orderId, status: o.status, cents: q.totalCents, raw: o.order, debugId: o.debugId });
+      recordPayment(b.id, 'order', `${reqKey(b)}-order-1`, { id: o.orderId, status: o.status, cents: q.totalCents, raw: o.order, debugId: o.debugId });
       logEvent(b.id, 'paypal.order.created', 'paypal', `PayPal order ${o.orderId} created (intent AUTHORIZE, ${fmt(q.totalCents)})`);
     });
   } catch (err) {
@@ -135,17 +142,17 @@ export async function authorizeBooking(id: number, actor: 'customer' | 'paypal' 
   if (!['pending_approval', 'expired'].includes(b.state)) throw new HttpError(409, `Cannot authorize a ${b.state} booking`);
   const order = await getOrder(b.order_id);
   if (order.status !== 'APPROVED' && order.status !== 'COMPLETED') throw new HttpError(409, `PayPal order is ${order.status}, not approved yet`);
-  const { auth, order: ord } = await authorizeOrder(b.order_id, `hb-${b.code}-auth`);
+  const { auth, order: ord } = await authorizeOrder(b.order_id, `${reqKey(b)}-auth`);
   const cents = fromPayPal(auth.amount.value);
   b = booking(id);
   if (b.state === 'expired' || b.state === 'cancelled') {
     // Late approval: authorize only if the slot is still free, otherwise void at once.
     const clash = overlaps(b.item_id, b.start_at, b.end_at, b.id).length > 0;
     if (clash || b.state === 'cancelled') {
-      const v = await voidAuthorization(auth.id, `hb-${b.code}-void`);
+      const v = await voidAuthorization(auth.id, `${reqKey(b)}-void`);
       tx(() => {
-        recordPayment(b.id, 'authorization', `hb-${b.code}-auth`, { id: auth.id, status: auth.status, cents, raw: ord });
-        recordPayment(b.id, 'void', `hb-${b.code}-void`, { id: auth.id, status: 'VOIDED', cents, raw: v.body });
+        recordPayment(b.id, 'authorization', `${reqKey(b)}-auth`, { id: auth.id, status: auth.status, cents, raw: ord });
+        recordPayment(b.id, 'void', `${reqKey(b)}-void`, { id: auth.id, status: 'VOIDED', cents, raw: v.body });
         logEvent(b.id, 'paypal.void', 'system', `Approval arrived after the slot was released. Hold ${auth.id} voided at once.`);
       });
       return booking(id);
@@ -154,7 +161,7 @@ export async function authorizeBooking(id: number, actor: 'customer' | 'paypal' 
     b = booking(id);
   }
   tx(() => {
-    recordPayment(b.id, 'authorization', `hb-${b.code}-auth`, { id: auth.id, status: auth.status, cents, raw: ord });
+    recordPayment(b.id, 'authorization', `${reqKey(b)}-auth`, { id: auth.id, status: auth.status, cents, raw: ord });
     const created = Date.parse(auth.create_time ?? nowISO());
     transition(b, 'authorized', actor, `PayPal authorization ${auth.id}: ${fmt(cents)} held, $0.00 captured`, {
       authorization_id: auth.id, authorized_cents: cents, honor_ends_at: new Date(created + 3 * 86_400_000).toISOString(),
@@ -172,7 +179,7 @@ export async function cancelBooking(id: number, actor: 'customer' | 'owner' | 's
     return booking(id);
   }
   if (b.state !== 'authorized') throw new HttpError(409, 'Only bookings that are not picked up yet can be cancelled');
-  const reqId = `hb-${b.code}-void`;
+  const reqId = `${reqKey(b)}-void`;
   const v = await voidAuthorization(b.authorization_id, reqId);
   tx(() => {
     recordPayment(b.id, 'void', reqId, { id: b.authorization_id, status: 'VOIDED', cents: b.authorized_cents, raw: v.body });
@@ -422,7 +429,7 @@ export async function settle(bookingId: number, by: 'ai' | 'owner') {
   const m = by === 'ai' ? settlementMath(b0.authorized_cents, b0.fee_cents, []) : prev;
   // Claim the settlement inside a transaction: a double click or a retry gets 409 here.
   tx(() => transition(booking(bookingId), 'settling', by === 'ai' ? 'ai' : 'owner', by === 'ai' ? 'Clean and confident: releasing the deposit.' : `Owner settles: capture ${fmt(m.captureCents)}, release ${fmt(m.releasedCents)}.`));
-  const reqId = `hb-${b0.code}-capture`;
+  const reqId = `${reqKey(b0)}-capture`;
   const note = m.chargesCents > 0
     ? `Rental fee ${fmt(m.feeCents)} + approved charges ${fmt(m.captureCents - m.feeCents)}. ${fmt(m.releasedCents)} of your hold released. Evidence: ${env.PUBLIC_BASE_URL || ''}/e/${b0.public_token}`
     : `Rental fee ${fmt(m.feeCents)}. Your ${fmt(m.releasedCents)} deposit hold is released.`;

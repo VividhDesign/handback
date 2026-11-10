@@ -3,7 +3,7 @@ import { HttpError } from '../lib/ids.ts';
 import { fmt, toPayPal } from '../lib/money.ts';
 import { logEvent } from '../lib/events.ts';
 import { env } from '../env.ts';
-import { booking, item } from '../bookings.ts';
+import { reqKey, booking, item } from '../bookings.ts';
 import { callTool, invoiceIdFromLink, ToolError } from '../paypal/toolkit.ts';
 
 /**
@@ -27,7 +27,7 @@ export async function draftExcessInvoice(bookingId: number, confirm: boolean) {
     based_on: findings,
   };
 
-  const reqId = `hb-${b.code}-invoice`;
+  const reqId = `${reqKey(b)}-invoice`;
   const existing = get("SELECT paypal_id, status, raw_json FROM payments WHERE request_id = ?", reqId);
   if (existing?.status === 'SENT' || (existing && !confirm)) {
     return { draft, sent: existing.status === 'SENT', invoice: { id: existing.paypal_id, status: existing.status, payer_view: JSON.parse(existing.raw_json ?? '{}').payer_view } };

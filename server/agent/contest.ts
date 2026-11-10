@@ -8,7 +8,7 @@ import { boundRefund } from '../pricing/settle.ts';
 import { callTool, ToolError } from '../paypal/toolkit.ts';
 import { assertTransition } from '../lib/states.ts';
 import { generateJson, modelChain } from '../ai/provider.ts';
-import { booking, rateCard } from '../bookings.ts';
+import { reqKey, booking, rateCard } from '../bookings.ts';
 
 export const RecommendationSchema = z.object({
   action: z.enum(['uphold', 'partial', 'deny']),
@@ -92,7 +92,7 @@ export async function resolveContest(contestId: number, input: { action: 'uphold
   const want = input.action === 'uphold' ? capturedCharges : input.refundCents ?? 0;
   const cents = boundRefund(want, capturedCharges, b.refunded_cents);
   if (cents <= 0) throw new HttpError(400, 'Nothing to refund');
-  const reqId = `hb-${b.code}-refund-${contestId}`;
+  const reqId = `${reqKey(b)}-refund-${contestId}`;
   const note = `Refund for contest on ${b.code}${input.note ? `: ${input.note}` : ''}`;
   // PayPal Agent Toolkit `create_refund`. The amount is the owner's bounded decision, built by code, never by
   // the model. The request id makes a retry or a double click return the same refund.
