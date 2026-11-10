@@ -43,7 +43,20 @@ export interface CallOpts {
   representation?: boolean;
 }
 
+/** Reads (GET) are retried twice on a network error or a PayPal 5xx; writes are never retried here. */
 export async function paypal<T = any>(method: string, path: string, opts: CallOpts = {}): Promise<{ status: number; body: T; debugId?: string }> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await paypalOnce<T>(method, path, opts);
+    } catch (err) {
+      const retry = method === 'GET' && attempt < 3 && (!(err instanceof PayPalError) || err.status >= 500);
+      if (!retry) throw err;
+      await new Promise((r) => setTimeout(r, 500 * attempt));
+    }
+  }
+}
+
+async function paypalOnce<T>(method: string, path: string, opts: CallOpts): Promise<{ status: number; body: T; debugId?: string }> {
   const headers: Record<string, string> = {
     Authorization: `Bearer ${await accessToken()}`,
     'Content-Type': 'application/json',

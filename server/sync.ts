@@ -2,7 +2,8 @@ import { all, get, run, tx, nowISO } from './db.ts';
 import { hasPayPal } from './env.ts';
 import { logEvent } from './lib/events.ts';
 import { getOrder } from './paypal/orders.ts';
-import { verifySignature } from './paypal/webhooks.ts';
+import { verifySignature, WEBHOOK_EVENTS } from './paypal/webhooks.ts';
+import { paypal } from './paypal/client.ts';
 import { authorizeBooking, booking, cancelBooking } from './bookings.ts';
 
 /** Stores the event once (dedupe on PayPal's event id). Returns false for a duplicate. */
@@ -97,4 +98,47 @@ export async function sweep() {
       console.warn('[sweep] void failed:', (err as Error).message);
     }
   }
+}
+
+/**
+ * Restores the webhook ledger after a restart. Render's free plan has no persistent disk, so a
+ * restart starts with an empty DB. PayPal keeps the events, so on boot we read them back with
+ * `GET /v1/notifications/webhooks-events` (an authenticated call with our own credentials) and add the
+ * missing ones, labeled "restored", at their original PayPal time. Live deliveries still go through
+ * signature verification; one already restored is a duplicate and is ignored.
+ */
+export async function restoreWebhookLedger(days = 14): Promise<number> {
+  const stamp = (ms: number) => new Date(ms).toISOString().replace(/\.\d+Z$/, 'Z');
+  const wanted = new Set(WEBHOOK_EVENTS);
+  const found: any[] = [];
+  // page_size is at most 100 (sandbox answers 400 above it). A full window is split in half.
+  const read = async (from: number, to: number): Promise<void> => {
+    const { body } = await paypal('GET', `/v1/notifications/webhooks-events?page_size=100&start_time=${stamp(from)}&end_time=${stamp(to)}`);
+    const events: any[] = (body as any)?.events ?? [];
+    if (events.length >= 100 && to - from > 60_000) {
+      const mid = Math.floor((from + to) / 2);
+      await read(from, mid);
+      await read(mid, to);
+      return;
+    }
+    for (const ev of events) if (wanted.has(ev.event_type)) found.push(ev);
+  };
+  const step = 86_400_000;
+  for (let end = Date.now(); end > Date.now() - days * step; end -= step) await read(end - step, end);
+  found.sort((a, b) => String(a.create_time).localeCompare(String(b.create_time)));
+  let added = 0;
+  for (const ev of found) {
+    tx(() => {
+      const r = run('INSERT OR IGNORE INTO webhook_events (paypal_event_id, event_type, verified, resource_id, received_at, processed_at) VALUES (?,?,?,?,?,?)',
+        String(ev.id), String(ev.event_type), 1, ev.resource?.id ?? null, nowISO(), nowISO());
+      if (r.changes !== 1) return;
+      const at = ev.create_time ? new Date(ev.create_time).toISOString() : nowISO();
+      if (ev.resource?.id) run('UPDATE payments SET webhook_confirmed_at = ? WHERE paypal_id = ? AND webhook_confirmed_at IS NULL', at, ev.resource.id);
+      run('INSERT INTO events (booking_id, type, actor, summary, data_json, created_at) VALUES (?,?,?,?,?,?)',
+        bookingForResource(ev), 'webhook.restored', 'paypal', `webhook.restored ${ev.event_type} (read back from PayPal after a server restart)`,
+        JSON.stringify({ event_id: ev.id, resource_id: ev.resource?.id, status: ev.resource?.status }), at);
+      added++;
+    });
+  }
+  return added;
 }

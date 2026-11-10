@@ -8,7 +8,7 @@ assertSandbox();
 
 const { api } = await import('./routes/api.ts');
 const { seedIfEmpty } = await import('./seed/seed.ts');
-const { sweep } = await import('./sync.ts');
+const { sweep, restoreWebhookLedger } = await import('./sync.ts');
 const { ensureWebhook } = await import('./paypal/webhooks.ts');
 const { get } = await import('./db.ts');
 
@@ -54,7 +54,13 @@ app.listen(env.PORT, () => {
 
 if (hasPayPal() && env.PUBLIC_BASE_URL.startsWith('https://')) {
   ensureWebhook(env.PUBLIC_BASE_URL).then(
-    (id) => console.log(`[webhook] registered (${id ? 'ok' : 'skipped'})`),
+    (id) => {
+      console.log(`[webhook] registered (${id ? 'ok' : 'skipped'})`);
+      restoreWebhookLedger().then(
+        (n) => console.log(`[webhook] ledger restore: ${n} event(s) read back from PayPal`),
+        (err) => console.warn('[webhook] ledger restore failed:', err.message),
+      );
+    },
     (err) => console.warn('[webhook] setup failed:', err.message),
   );
 }
