@@ -1,0 +1,78 @@
+{
+  "model": "gemini-3.5-flash",
+  "created_at": "2026-11-10T17:39:25.303Z",
+  "prompt_version": "v3",
+  "result": {
+    "item_matches_listing": true,
+    "photo_quality": [
+      {
+        "photo_index": 1,
+        "ok": true,
+        "problem": null
+      },
+      {
+        "photo_index": 2,
+        "ok": true,
+        "problem": null
+      },
+      {
+        "photo_index": 3,
+        "ok": true,
+        "problem": null
+      },
+      {
+        "photo_index": 4,
+        "ok": true,
+        "problem": null
+      },
+      {
+        "photo_index": 5,
+        "ok": true,
+        "problem": null
+      }
+    ],
+    "existing_marks": [
+      {
+        "id": "m1",
+        "part": "base rim",
+        "description": "Paint wear and exposed metal along the bottom rim edge",
+        "severity": "minor",
+        "photo_index": 1,
+        "box_2d": [
+          813,
+          447,
+          836,
+          584
+        ]
+      },
+      {
+        "id": "m2",
+        "part": "upper shoulder",
+        "description": "Dent on the upper curve of the bottle body",
+        "severity": "minor",
+        "photo_index": 5,
+        "box_2d": [
+          64,
+          383,
+          116,
+          423
+        ]
+      },
+      {
+        "id": "m3",
+        "part": "body",
+        "description": "Light scratches and scuffs on the black exterior coating",
+        "severity": "minor",
+        "photo_index": 1,
+        "box_2d": [
+          660,
+          520,
+          688,
+          595
+        ]
+      }
+    ],
+    "accessories": [],
+    "summary": "The item is an insulated water bottle matching the listing. It shows minor pre-existing wear including paint loss along the bottom rim edge, surface scratches on the body coating, and a small dent on the upper shoulder."
+  }
+}
