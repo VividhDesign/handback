@@ -51,7 +51,7 @@ Sandbox invoice test: two parallel "send" clicks gave one sent invoice and one 4
 |---|---|---|---|---|
 | 17 | Does v6 need a server-made client token? | v6 docs (one-time payments page) | No: `createInstance({ clientId, components: ["paypal-payments"] })` works with the public client id, so no extra server endpoint | Saved: one endpoint |
 | 18 | How does the click wait for our server order? | v6 docs | Start the order call inside the click without awaiting it and pass the promise to `session.start({ presentationMode: "auto" }, promise)`; awaiting first can get the popup blocked. Clear in the docs | Small |
-| 19 | Does v6 work with `intent: AUTHORIZE` orders? | Local run | Yes: the SDK only needs the order id; intent is set by our server. Eligibility check and `<paypal-button>` rendered on first try (SDK 6.72.0) | None |
+| 19 | Does v6 work with `intent: AUTHORIZE` orders? | Local run | The SDK only needs the order id; intent is set by our server. Eligibility check and `<paypal-button>` rendered on first try (SDK 6.72.0) and the click created our AUTHORIZE order. Approval through the popup is checked in session S2 | None so far |
 
 ## Non-PayPal note (AI provider), 10 Nov
 - Gemini free tier is per model and small (gemini-2.5-flash: 20 requests/day, 5/min). A model fallback chain kept the demo working. Not a PayPal issue; recorded so the comparison with PayPal sandbox limits is fair (the PayPal sandbox had no such limits in our use).
