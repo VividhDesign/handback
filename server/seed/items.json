@@ -1,0 +1,18 @@
+[
+  { "slug": "item1", "name": "Photographed item 1", "category": "Electronics", "description": "Name comes from photos/item1/about.txt (prepare-samples).", "daily_fee_cents": 1600, "deposit_cents": 15000, "replacement_value_cents": 60000, "tag": "real photos",
+    "accessories": [] },
+  { "slug": "item2", "name": "Photographed item 2", "category": "Outdoor", "description": "Name comes from photos/item2/about.txt (prepare-samples).", "daily_fee_cents": 1200, "deposit_cents": 10000, "replacement_value_cents": 40000, "tag": "real photos",
+    "accessories": [] },
+  { "slug": "projector", "name": "Portable projector", "category": "Electronics", "description": "Compact 1080p projector for movie nights.", "daily_fee_cents": 1800, "deposit_cents": 12000, "replacement_value_cents": 48000,
+    "accessories": [{ "name": "power adapter", "list_price_cents": 2500, "search_query": "portable projector power adapter" }, { "name": "remote control", "list_price_cents": 1500, "search_query": "projector remote control" }] },
+  { "slug": "drill-set", "name": "Cordless drill set", "category": "Tools", "description": "18 V drill with two batteries and a bit set.", "daily_fee_cents": 900, "deposit_cents": 6000, "replacement_value_cents": 22000,
+    "accessories": [{ "name": "battery", "list_price_cents": 4500, "search_query": "18v drill battery" }, { "name": "charger", "list_price_cents": 3000, "search_query": "18v drill battery charger" }, { "name": "bit set", "list_price_cents": 2000, "search_query": "drill bit set" }] },
+  { "slug": "tent-4p", "name": "4-person tent", "category": "Outdoor", "description": "Three-season dome tent with rain fly.", "daily_fee_cents": 1400, "deposit_cents": 8000, "replacement_value_cents": 30000,
+    "accessories": [{ "name": "rain fly", "list_price_cents": 4000, "search_query": "4 person tent rain fly" }, { "name": "stake bag", "list_price_cents": 1200, "search_query": "tent stakes set" }] },
+  { "slug": "stand-mixer", "name": "Stand mixer", "category": "Kitchen", "description": "5-quart tilt-head mixer.", "daily_fee_cents": 1100, "deposit_cents": 9000, "replacement_value_cents": 35000,
+    "accessories": [{ "name": "dough hook", "list_price_cents": 1800, "search_query": "stand mixer dough hook" }, { "name": "whisk", "list_price_cents": 1800, "search_query": "stand mixer wire whisk" }] },
+  { "slug": "drone", "name": "Camera drone", "category": "Electronics", "description": "Foldable 4K drone with controller.", "daily_fee_cents": 2500, "deposit_cents": 25000, "replacement_value_cents": 90000,
+    "accessories": [{ "name": "controller", "list_price_cents": 9000, "search_query": "camera drone remote controller" }, { "name": "spare propellers", "list_price_cents": 1500, "search_query": "drone propellers spare" }] },
+  { "slug": "cooler", "name": "Rolling cooler", "category": "Outdoor", "description": "50-quart cooler on wheels.", "daily_fee_cents": 700, "deposit_cents": 4000, "replacement_value_cents": 15000,
+    "accessories": [{ "name": "drain plug", "list_price_cents": 800, "search_query": "cooler drain plug" }] }
+]
