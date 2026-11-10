@@ -59,6 +59,7 @@ Sandbox invoice test: two parallel "send" clicks gave one sent invoice and one 4
 |---|---|---|---|---|
 | 20 | What happens if a `PayPal-Request-Id` repeats after the database is reset? | Sandbox run | PayPal returned the order from the earlier run (same id, old amount), as idempotency promises. Our ids used only the booking code, which restarts at HB-1 in a new database. Fix: the key now includes part of the booking's random token | Cost: about 20 min to spot |
 | 21 | Do a clean return, a charged return, a contest refund and a cancel all settle as expected? | Sandbox run, checked with GET on each id | Clean: $8 captured with `final_capture`, authorization CAPTURED, $40 released. Charged: $17 captured. Contest: $5 refunded through Agent Toolkit `create_refund`, capture PARTIALLY_REFUNDED. Cancel: authorization VOIDED | None |
+| 22 | What if the return page and the `CHECKOUT.ORDER.APPROVED` webhook both authorize the same order at once? | Hosted sandbox run (HB-1041) | Both calls sent the same `PayPal-Request-Id`, so PayPal returned one authorization to both. The hold was correct; only our state machine complained ("authorized → authorized"). Fix: after the authorize call returns, re-read the booking and return it if it is already held. Same booking then settled clean on the hosted server: $8 captured, $40 released 17.6 s after the return photos | Cost: about 10 min |
 
 Testing note: the built-in browser of our coding tool blocks popups that an automated click opens, so the popup was approved by hand in a normal browser.
 
