@@ -102,26 +102,32 @@ export function reseedSamples() {
   return { sampleRows: made };
 }
 
-/** Real completed sandbox rentals exported by `npm run session -- --export-seed` (B13). */
+/**
+ * Real completed sandbox rentals exported by `scripts/export-seed.ts` (B10 "Seed"). Their PayPal ids
+ * are real. Each import adds a timeline line saying where the run came from, so it is labelled.
+ */
 function importRealRuns() {
   const f = path.join(SEED_DIR, 'real-runs.json');
   if (!existsSync(f)) return;
   const runs: any[] = JSON.parse(readFileSync(f, 'utf8'));
+  const insert = (table: string, row: Record<string, unknown>, extra: Record<string, unknown>) => {
+    const r = { ...Object.fromEntries(Object.entries(row).filter(([k]) => k !== 'id' && !(k in extra))), ...extra };
+    const c = Object.keys(r);
+    return Number(run(`INSERT INTO ${table} (${c.join(',')}) VALUES (${c.map(() => '?').join(',')})`, ...c.map((k) => r[k] as any)).lastInsertRowid);
+  };
   for (const r of runs) {
     if (get('SELECT id FROM bookings WHERE code = ?', r.booking.code)) continue;
     tx(() => {
       const it = get('SELECT id FROM items WHERE slug = ?', r.itemSlug);
       if (!it) return;
-      const cols = Object.keys(r.booking).filter((k) => k !== 'id' && k !== 'item_id');
-      const ins = run(`INSERT INTO bookings (${cols.join(',')}, item_id) VALUES (${cols.map(() => '?').join(',')}, ?)`, ...cols.map((k) => r.booking[k]), it.id);
-      const bid = Number(ins.lastInsertRowid);
-      for (const [table, rows] of Object.entries(r.related ?? {}) as [string, any[]][]) {
-        if (!['payments', 'events', 'findings', 'inspections', 'contests'].includes(table)) continue;
-        for (const row of rows) {
-          const c = Object.keys(row).filter((k) => k !== 'id' && k !== 'booking_id' && k !== 'inspection_id');
-          run(`INSERT INTO ${table} (${c.join(',')}, booking_id) VALUES (${c.map(() => '?').join(',')}, ?)`, ...c.map((k) => row[k]), bid);
-        }
-      }
+      const bid = insert('bookings', r.booking, { item_id: it.id });
+      const rel = r.related ?? {};
+      const inspIds = new Map<number, number>();
+      for (const row of rel.inspections ?? []) inspIds.set(row.id, insert('inspections', row, { booking_id: bid }));
+      for (const row of rel.findings ?? []) insert('findings', row, { booking_id: bid, inspection_id: inspIds.get(row.inspection_id) ?? null });
+      for (const row of rel.photos ?? []) insert('photos', row, { booking_id: bid, path: path.join(ROOT, row.path) });
+      for (const t of ['payments', 'events', 'contests']) for (const row of rel[t] ?? []) insert(t, row, { booking_id: bid });
+      insert('events', { type: 'seed.real_run', actor: 'system', summary: `Real sandbox rental recorded in ${r.label ?? 'an approval session'} and loaded from the seed file. The PayPal ids are real; the photos are the sample sets.`, created_at: new Date().toISOString() }, { booking_id: bid });
     });
   }
 }

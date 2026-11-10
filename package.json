@@ -16,7 +16,8 @@
     "typecheck": "tsc --noEmit -p .",
     "session": "node scripts/approval-session.ts",
     "samples": "node scripts/prepare-samples.ts",
-    "check-secrets": "bash scripts/check-secrets.sh"
+    "check-secrets": "bash scripts/check-secrets.sh",
+    "export-seed": "node scripts/export-seed.ts"
   },
   "dependencies": {
     "@google/genai": "^3.0.0",

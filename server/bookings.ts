@@ -96,7 +96,7 @@ function validateDates(startISO: string, endISO: string) {
 }
 
 function nextCode(): string {
-  const r = get<{ n: number }>("SELECT COALESCE(MAX(CAST(SUBSTR(code, 4) AS INTEGER)), 1040) n FROM bookings WHERE code LIKE 'HB-%'")!;
+  const r = get<{ n: number }>("SELECT COALESCE(MAX(CAST(SUBSTR(code, 4) AS INTEGER)), 1040) n FROM bookings WHERE code GLOB 'HB-[0-9]*'")!;
   return `HB-${r.n + 1}`;
 }
 
