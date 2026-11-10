@@ -1,6 +1,6 @@
 {
   "model": "gemini-3.5-flash",
-  "created_at": "2026-11-10T17:39:25.303Z",
+  "created_at": "2026-11-10T19:01:38.908Z",
   "prompt_version": "v3",
   "result": {
     "item_matches_listing": true,
@@ -34,45 +34,45 @@
     "existing_marks": [
       {
         "id": "m1",
-        "part": "base rim",
-        "description": "Paint wear and exposed metal along the bottom rim edge",
+        "part": "upper body",
+        "description": "Small dent near the top shoulder of the bottle",
         "severity": "minor",
-        "photo_index": 1,
+        "photo_index": 5,
         "box_2d": [
-          813,
-          447,
-          836,
-          584
+          60,
+          380,
+          120,
+          440
         ]
       },
       {
         "id": "m2",
-        "part": "upper shoulder",
-        "description": "Dent on the upper curve of the bottle body",
+        "part": "main body",
+        "description": "Surface scratches and scuffs on black coating",
         "severity": "minor",
-        "photo_index": 5,
+        "photo_index": 2,
         "box_2d": [
-          64,
-          383,
-          116,
-          423
+          380,
+          410,
+          560,
+          540
         ]
       },
       {
         "id": "m3",
-        "part": "body",
-        "description": "Light scratches and scuffs on the black exterior coating",
+        "part": "bottom edge",
+        "description": "Paint wear along bottom rim exposing bare metal",
         "severity": "minor",
-        "photo_index": 1,
+        "photo_index": 2,
         "box_2d": [
-          660,
-          520,
-          688,
-          595
+          950,
+          470,
+          976,
+          550
         ]
       }
     ],
     "accessories": [],
-    "summary": "The item is an insulated water bottle matching the listing. It shows minor pre-existing wear including paint loss along the bottom rim edge, surface scratches on the body coating, and a small dent on the upper shoulder."
+    "summary": "The black insulated water bottle matches the listing. It shows signs of use including surface scuffs on the body, paint wear around the bottom base rim, and a small dent near the shoulder."
   }
 }

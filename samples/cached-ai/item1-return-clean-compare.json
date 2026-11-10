@@ -1,6 +1,6 @@
 {
-  "model": "gemini-3.5-flash",
-  "created_at": "2026-11-10T17:39:36.886Z",
+  "model": "gemini-3-flash-preview",
+  "created_at": "2026-11-10T19:01:17.022Z",
   "prompt_version": "v3",
   "result": {
     "same_item": {
@@ -43,8 +43,8 @@
     },
     "overall": {
       "verdict": "clean",
-      "confidence": 0.95,
-      "summary": "The insulated water bottle was returned in the same condition as at pickup with no new damage observed."
+      "confidence": 0.9,
+      "summary": "The water bottle was returned in the same condition as it was picked up. All existing marks (m1, m2, m3, and m4) are still visible in the return photos. While the bottle is covered in water droplets, these are not considered damage or dirt according to the inspection rules."
     }
   }
 }
