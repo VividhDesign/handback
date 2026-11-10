@@ -7,7 +7,7 @@ import { fmt, fromPayPal } from '../lib/money.ts';
 import { boundRefund } from '../pricing/settle.ts';
 import { refundCapture } from '../paypal/payments.ts';
 import { assertTransition } from '../lib/states.ts';
-import { gemini } from '../ai/provider.ts';
+import { generateJson, modelChain } from '../ai/provider.ts';
 import { booking, rateCard } from '../bookings.ts';
 
 export const RecommendationSchema = z.object({
@@ -37,24 +37,14 @@ function ruleRecommendation(findings: Row[]): Recommendation {
 }
 
 async function aiRecommendation(b: Row, reason: string, findings: Row[]): Promise<Recommendation> {
-  const ctl = new AbortController();
-  const t = setTimeout(() => ctl.abort(), 20_000);
-  try {
-    const res = await gemini().models.generateContent({
-      model: env.GEMINI_TEXT_MODEL,
-      contents: [{ role: 'user', parts: [{ text: JSON.stringify({ booking: b.code, charged_cents: b.charges_cents, captured_charges_cents: b.captured_cents - b.fee_cents, findings, rate_card: rateCard(), customer_contest_text: reason }) }] }],
-      config: {
-        systemInstruction: SYSTEM,
-        temperature: 0,
-        responseMimeType: 'application/json',
-        responseSchema: { type: 'OBJECT', properties: { action: { type: 'STRING', enum: ['uphold', 'partial', 'deny'] }, refund_cents: { type: 'INTEGER' }, reason: { type: 'STRING' } }, required: ['action', 'refund_cents', 'reason'] } as any,
-        abortSignal: ctl.signal,
-      },
-    });
-    return { ...RecommendationSchema.parse(JSON.parse(res.text ?? '')), source: 'ai' };
-  } finally {
-    clearTimeout(t);
-  }
+  const out = await generateJson({
+    models: modelChain(env.GEMINI_TEXT_MODEL),
+    system: SYSTEM,
+    timeoutMs: 20_000,
+    parts: [{ text: JSON.stringify({ booking: b.code, charged_cents: b.charges_cents, captured_charges_cents: b.captured_cents - b.fee_cents, findings, rate_card: rateCard(), customer_contest_text: reason }) }],
+    schema: { type: 'OBJECT', properties: { action: { type: 'STRING', enum: ['uphold', 'partial', 'deny'] }, refund_cents: { type: 'INTEGER' }, reason: { type: 'STRING' } }, required: ['action', 'refund_cents', 'reason'] },
+  });
+  return { ...RecommendationSchema.parse(out.json), source: 'ai' };
 }
 
 export async function openContest(bookingId: number, reason: string) {

@@ -13,7 +13,7 @@ import { captureFinal, voidAuthorization } from './paypal/payments.ts';
 import { PayPalError } from './paypal/client.ts';
 import { processPhoto } from './checks/photos.ts';
 import { runReturnChecks, pickupChecks, type PhotoRow } from './checks/deterministic.ts';
-import { runPassport, runCompare, AiUnavailable, type LoadedPhoto } from './ai/inspect.ts';
+import { runPassport, runCompare, AiUnavailable, PROMPT_VERSION, type LoadedPhoto } from './ai/inspect.ts';
 import { capReason, countUsage } from './ai/queue.ts';
 import { decide } from './ai/decide.ts';
 import type { Passport } from './ai/schemas.ts';
@@ -250,7 +250,7 @@ export async function runPickup(bookingId: number, ipHash: string) {
   }
   tx(() => {
     run('INSERT INTO inspections (booking_id, phase, mode, model, prompt_version, checks_json, result_json, decision, latency_ms, cached_at, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
-      bookingId, 'pickup', out.mode, out.model, 'v1', JSON.stringify(checks), JSON.stringify(out.result), 'passport', out.latencyMs, (out as any).cachedAt ?? null, nowISO());
+      bookingId, 'pickup', out.mode, out.model, PROMPT_VERSION, JSON.stringify(checks), JSON.stringify(out.result), 'passport', out.latencyMs, (out as any).cachedAt ?? null, nowISO());
     logEvent(bookingId, 'ai.passport', out.mode === 'manual' ? 'owner' : 'ai',
       `ai.passport ${out.result.existing_marks.length} existing mark(s), ${out.result.accessories.filter((a) => a.present).length}/${acc.length} accessories (${out.mode}${out.mode === 'live' ? `, ${(out.latencyMs / 1000).toFixed(1)} s` : ''})`);
     transition(booking(bookingId), 'picked_up', 'owner', `Picked up. Condition passport saved.`, { picked_up_at: nowISO() });
@@ -315,7 +315,7 @@ export async function runReturn(bookingId: number, ipHash: string, opts: { retur
   const pricedFindings = await priceFindings(out.result.findings, it, acc, card);
   const inspectionId = tx(() => {
     const r = run('INSERT INTO inspections (booking_id, phase, mode, model, prompt_version, checks_json, result_json, decision, reasons_json, latency_ms, cached_at, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
-      bookingId, 'return', out.mode, out.model, 'v1', JSON.stringify(checks), JSON.stringify(out.result), d.decision, JSON.stringify(d.reasons), out.latencyMs, out.cachedAt ?? null, nowISO());
+      bookingId, 'return', out.mode, out.model, PROMPT_VERSION, JSON.stringify(checks), JSON.stringify(out.result), d.decision, JSON.stringify(d.reasons), out.latencyMs, out.cachedAt ?? null, nowISO());
     const iid = Number(r.lastInsertRowid);
     run("DELETE FROM findings WHERE booking_id = ? AND decision = 'pending'", bookingId);
     for (const f of pricedFindings) {

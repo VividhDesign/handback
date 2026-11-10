@@ -17,8 +17,11 @@ export const env = {
   PAYPAL_CLIENT_SECRET: e.PAYPAL_CLIENT_SECRET ?? '',
   PUBLIC_BASE_URL: (e.PUBLIC_BASE_URL || e.RENDER_EXTERNAL_URL || '').replace(/\/$/, ''),
   GEMINI_API_KEY: e.GEMINI_API_KEY ?? '',
-  GEMINI_VISION_MODEL: e.GEMINI_VISION_MODEL || 'gemini-2.5-flash',
-  GEMINI_TEXT_MODEL: e.GEMINI_TEXT_MODEL || 'gemini-2.5-flash',
+  GEMINI_VISION_MODEL: e.GEMINI_VISION_MODEL || 'gemini-3.5-flash',
+  GEMINI_TEXT_MODEL: e.GEMINI_TEXT_MODEL || 'gemini-3.5-flash',
+  // Free-tier quotas are per model and small (one model allowed 20 requests a day), so a busy or
+  // exhausted model hands over to the next one. The model that answered is recorded and shown.
+  GEMINI_FALLBACK_MODELS: (e.GEMINI_FALLBACK_MODELS ?? 'gemini-3.6-flash,gemini-3-flash-preview,gemini-3.5-flash-lite,gemini-2.5-flash').split(',').map((s) => s.trim()).filter(Boolean),
   CHANNEL3_API_KEY: e.CHANNEL3_API_KEY ?? '',
   AG_STUDIO: e.AG_STUDIO ?? '',
   ADMIN_TOKEN: e.ADMIN_TOKEN ?? '',
