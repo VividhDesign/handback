@@ -299,7 +299,14 @@ function ExcessInvoice({ id }: { id: number }) {
         <>
           <p className="small">To {draft.draft.recipient.name}: {draft.draft.items.map((i: any) => `${i.name} ${money(i.amount_cents)}`).join(', ')}</p>
           <p className="faint">{draft.draft.note}</p>
-          <Button className="btn-primary" busy={act.busy === 'send'} onClick={() => act.run('send', async () => setDraft(await post(`/shop/bookings/${id}/excess-invoice`, { confirm: true })))}>Send with PayPal</Button>
+          {draft.sent ? (
+            <Notice tone="ok">
+              Invoice {draft.invoice?.id} sent with PayPal (Agent Toolkit).{' '}
+              {draft.invoice?.payer_view && <a href={draft.invoice.payer_view} target="_blank" rel="noreferrer">Open the invoice</a>}
+            </Notice>
+          ) : (
+            <Button className="btn-primary" busy={act.busy === 'send'} onClick={() => act.run('send', async () => setDraft(await post(`/shop/bookings/${id}/excess-invoice`, { confirm: true })))}>Send with PayPal</Button>
+          )}
         </>
       )}
       <ErrorNotice error={act.error} />
