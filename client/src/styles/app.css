@@ -160,3 +160,15 @@ details summary { cursor: pointer; color: var(--muted); font-size: 14px; }
   .card { padding: 16px; }
   h1 { font-size: 24px; }
 }
+
+/* Schedule (Bryntum Scheduler) */
+.schedule-box { height: 560px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+.legend { gap: 16px; }
+.swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+.hb-ev { display: flex; flex-direction: column; justify-content: center; line-height: 1.15; font-size: 12px; overflow: hidden; min-width: 0; }
+.hb-ev b { font-size: 13px; }
+.hb-ev span { opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hb-sample { opacity: 0.6; }
+.b-sch-event.hb-tentative, .hb-tentative .b-sch-event { border-style: dashed !important; border-width: 2px !important; }
+.b-sch-range.hb-marker-honor, .b-sch-line.hb-marker-honor { border-left: 2px dashed var(--s-review); }
+.b-sch-range.hb-marker-expiry, .b-sch-line.hb-marker-expiry { border-left: 2px solid var(--s-blocked); }

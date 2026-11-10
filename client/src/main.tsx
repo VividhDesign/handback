@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import { StrictMode, lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import './styles/app.css';
@@ -12,6 +12,10 @@ import { Inventory } from './pages/Inventory.tsx';
 import { Evidence } from './pages/Evidence.tsx';
 import { NotFound } from './pages/NotFound.tsx';
 
+// Heavy sponsor libraries load only on their own pages.
+const Schedule = lazy(() => import('./pages/Schedule.tsx').then((m) => ({ default: m.Schedule })));
+const loading = <div className="page muted">Loading…</div>;
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
@@ -22,6 +26,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="rent" element={<Rent />} />
           <Route path="booking/:token" element={<Booking />} />
           <Route path="shop" element={<Desk />} />
+          <Route path="shop/schedule" element={<Suspense fallback={loading}><Schedule /></Suspense>} />
           <Route path="shop/inventory" element={<Inventory />} />
           <Route path="e/:token" element={<Evidence />} />
           <Route path="*" element={<NotFound />} />
