@@ -55,6 +55,17 @@ Every PayPal id (order, authorization, capture, refund) and every `debug_id` on 
 
 Bryntum Scheduler is used under its free trial package (`@bryntum/scheduler-trial`), so the view shows a trial watermark.
 
+## Insights (AG Studio)
+
+`/shop/insights` is a dashboard built with AG Studio ([client/src/pages/Insights.tsx](client/src/pages/Insights.tsx)). Its four data sources come from `GET /api/shop/insights` ([server/insights.ts](server/insights.ts)): bookings, AI findings, the PayPal payments ledger and item utilisation.
+
+- Three Handback widgets: **Deposit release time** (median seconds from return check-in to settlement on PayPal, with a per-day trend), **Hold funnel** (authorized → released, charged, voided, refunded or still holding) and **AI vs owner** (share of AI findings the owner approved).
+- Built-in widgets: booked days by item, PayPal amounts by call type, and a bookings grid.
+- "Edit layout" lets you move, resize, remap or add widgets. The layout is saved in your browser; "Reset layout" restores the default.
+- "Real sandbox runs only" hides the labelled sample rows. Every row carries a `run` column ("Sample" or "Sandbox run").
+
+AG Studio runs without a licence key here, so it shows a trial watermark.
+
 ## Try it (judge path)
 
 The `/judge` page in the app walks through this.

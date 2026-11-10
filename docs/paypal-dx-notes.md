@@ -71,3 +71,9 @@ Testing note: the built-in browser of our coding tool blocks popups that an auto
 - It needs three CSS imports (structural, one theme, the bundled icon font) and a parent with a fixed height.
 - Drag validation is done on the server after the drop, and the bar snaps back with the reason, so the hold rules live in one place.
 - Our bug: when bookings arrived before the item rows, about one page load in four showed an empty chart. Fix: load both together and mount the scheduler after both arrive. Cost: about 20 min.
+
+## Non-PayPal note (AG Studio), 11 Nov
+- Installed `ag-studio-react@3.1.0` (it brings `ag-studio` and AG Grid Enterprise). No CSS import is needed; the theme is set in code with `studioTheme.withParams(...)`. Without a licence key it logs a notice and shows a watermark.
+- The example pages did not render code in our fetch tool, so we built the custom widgets from the TypeScript typings in the package: `createWidgets({ additionalTypes, menu })`, and each widget calls `widgetApi.getData({ fields })`, which returns rows keyed by each field's `key`. This worked first time.
+- Our tuning: widget sizes are in grid tracks (24 wide, short rows), so the first layout was too small to read. About 10 min.
+- The layout is saved both from `onStateUpdated` and from `api.getState()` when the user clicks "Done editing", so a save does not depend on one event.
