@@ -20,6 +20,7 @@ Handback turns the deposit into a PayPal **authorization hold**, photographs the
 
 | API | What Handback does with it | Code |
 |---|---|---|
+| **PayPal JS SDK v6** (`web-sdk/v6/core`, `paypal-payments`, one-time payment session) | The rent page shows the PayPal button; the click creates the AUTHORIZE order on our server and opens PayPal. The redirect link stays as a fallback if the SDK cannot load | `client/src/components/PayPalButton.tsx`, `client/src/pages/Rent.tsx` |
 | Orders v2: create with `intent: AUTHORIZE` | Booking creates one order for rental fee + deposit; the buyer approves it on PayPal | `server/paypal/orders.ts` |
 | Orders v2: authorize | After approval the order is authorized: the money is held, nothing is charged | `server/paypal/orders.ts` |
 | Payments v2: capture with `final_capture: true` | Settlement makes exactly one capture (fee, or fee + approved charges, never above the hold); PayPal releases the rest | `server/paypal/payments.ts`, `server/bookings.ts` (`settle`) |
