@@ -11,3 +11,4 @@ secrets.env
 scripts/out/
 .DS_Store
 coverage/
+.test-data/
