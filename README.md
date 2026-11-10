@@ -2,7 +2,7 @@
 
 **An AI return desk for small rental shops.** The deposit is a PayPal authorization hold. AI compares pickup and return photos. The deposit is released in seconds, or a human-approved, evidence-backed charge is captured.
 
-> Sandbox demo. No real money moves. Live demo: _URL added after the first deploy_ · Video: _added at submission_
+> Sandbox demo. No real money moves. Live demo: https://handback-nvq9.onrender.com · Video: _added at submission_
 
 ## The problem
 
