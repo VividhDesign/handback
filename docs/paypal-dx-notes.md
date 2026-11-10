@@ -65,3 +65,9 @@ Testing note: the built-in browser of our coding tool blocks popups that an auto
 
 ## Non-PayPal note (AI provider), 10 Nov
 - Gemini free tier is per model and small (gemini-2.5-flash: 20 requests/day, 5/min). A model fallback chain kept the demo working. Not a PayPal issue; recorded so the comparison with PayPal sandbox limits is fair (the PayPal sandbox had no such limits in our use).
+
+## Non-PayPal note (Bryntum Scheduler), 11 Nov
+- Installed the trial as `@bryntum/scheduler@npm:@bryntum/scheduler-trial@7.3.8` plus `@bryntum/scheduler-react@7.3.8`. npm 11 blocked the package install scripts; they were not needed because the trial build runs without them.
+- It needs three CSS imports (structural, one theme, the bundled icon font) and a parent with a fixed height.
+- Drag validation is done on the server after the drop, and the bar snaps back with the reason, so the hold rules live in one place.
+- Our bug: when bookings arrived before the item rows, about one page load in four showed an empty chart. Fix: load both together and mount the scheduler after both arrive. Cost: about 20 min.

@@ -44,6 +44,17 @@ Every PayPal id (order, authorization, capture, refund) and every `debug_id` on 
 - **Prices** come from the rate card (`server/pricing/ratecard.ts`), shown to the customer before booking.
 - **Human in the loop:** every finding is approved or waived by the owner before any money is captured.
 
+## Schedule view (Bryntum Scheduler)
+
+`/shop/schedule` shows each item as a row and each booking as a bar, coloured by payment state ([client/src/pages/Schedule.tsx](client/src/pages/Schedule.tsx)).
+
+- A booking waiting for PayPal approval is dashed and counts down its approval window. It turns solid live, over server-sent events, when the authorization arrives.
+- Clicking a booking adds two markers: the end of PayPal's honor period and the hold expiry.
+- Dragging a held booking moves it, and dragging its end extends it. The server checks every change (`PATCH /api/shop/bookings/:id`, `moveBooking` in [server/bookings.ts](server/bookings.ts)): no overlap on the same item, the end must be before the hold expires, and the new rental fee must leave at least half the deposit covered by the existing hold. A rejected change snaps back and shows the reason. The PayPal hold itself is never changed by a move.
+- Sample, pending, returned and settled bookings are read-only.
+
+Bryntum Scheduler is used under its free trial package (`@bryntum/scheduler-trial`), so the view shows a trial watermark.
+
 ## Try it (judge path)
 
 The `/judge` page in the app walks through this.
