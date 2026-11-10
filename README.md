@@ -33,7 +33,7 @@ Every PayPal id (order, authorization, capture, refund) and every `debug_id` on 
 
 ## How it uses AI
 
-- **Model:** Google Gemini (vision), chosen by env (`GEMINI_VISION_MODEL`).
+- **Model:** Google Gemini (vision), chosen by env (`GEMINI_VISION_MODEL`, default `gemini-3.5-flash`). Free-tier quotas are per model and small, so a busy or exhausted model hands over to the next one in `GEMINI_FALLBACK_MODELS`; the model that answered is recorded with every inspection.
 - **Call 1, pickup passport:** five pickup photos → JSON with existing marks (with boxes), accessories present, photo quality.
 - **Call 2, return comparison:** pickup + return photos + the passport → JSON with new findings (type, severity, confidence, box), accessories, `same_item`, `cannot_determine`, `suspicious_text_in_photos`, and an overall verdict.
 - Both responses are validated with zod (`server/ai/schemas.ts`). Photo text is treated as data; text aimed at the AI sends the return to a human.
