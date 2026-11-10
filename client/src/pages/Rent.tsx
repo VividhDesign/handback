@@ -3,6 +3,7 @@ import { api, post } from '../lib/api.ts';
 import { useApi, useAction } from '../lib/hooks.ts';
 import { money, shortMoney, date } from '../lib/format.ts';
 import { Button, ErrorNotice, Loading, MoneyLine, Notice } from '../components/ui.tsx';
+import { PayPalSdkButton } from '../components/PayPalButton.tsx';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const localDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -22,6 +23,7 @@ export function Rent() {
   const [quote, setQuote] = useState<any>(null);
   const [booked, setBooked] = useState<any[]>([]);
   const act = useAction();
+  const [sdkOff, setSdkOff] = useState<string | null>(null);
 
   useEffect(() => { if (data?.items?.length && itemId == null) setItemId(data.items[0].id); }, [data, itemId]);
   const it = useMemo(() => data?.items?.find((i: any) => i.id === itemId), [data, itemId]);
@@ -39,9 +41,21 @@ export function Rent() {
   const dateError = end <= start ? 'Return must be after pickup.' : days > 7 ? 'A booking is at most 7 days.' : clash ? 'This item is already booked for some of these days.' : null;
   const paypalReady = cfg.data?.paypalConfigured;
 
+  const createBooking = () => post('/bookings', { itemId, start: toIso(start), end: toIso(end), name, email });
   async function book() {
-    const r = await act.run('book', () => post('/bookings', { itemId, start: toIso(start), end: toIso(end), name, email }));
+    const r = await act.run('book', createBooking);
     if (r?.approveUrl) window.location.assign(r.approveUrl);
+  }
+  /** SDK path: the booking is created inside the PayPal click; errors show in the same notice. */
+  async function createForSdk() {
+    act.setError(null);
+    try {
+      const r = await createBooking();
+      return { orderId: r.orderId as string, token: r.token as string };
+    } catch (e: any) {
+      act.setError(e?.message ?? 'Could not start the booking');
+      throw e;
+    }
   }
 
   if (loading) return <div className="page"><Loading lines={6} /></div>;
@@ -94,11 +108,26 @@ export function Rent() {
           <label>Email<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" maxLength={120} /></label>
           <ErrorNotice error={act.error} />
           {cfg.data && !paypalReady && <Notice tone="warn">PayPal sandbox keys are not configured on this server yet, so booking is turned off.</Notice>}
-          <Button className="btn-paypal" style={{ width: '100%', justifyContent: 'center', minHeight: 48 }} busy={act.busy === 'book'}
-            disabled={!it || !!dateError || !quote || !name.trim() || !/^\S+@\S+\.\S+$/.test(email) || !paypalReady} onClick={book}>
-            Approve the hold with PayPal
-          </Button>
-          <p className="faint">You will approve in the PayPal sandbox and come back here. {date(toIso(start))} → {date(toIso(end))}.</p>
+          {(() => {
+            const blocked = !it || !!dateError || !quote || !name.trim() || !/^\S+@\S+\.\S+$/.test(email) || !paypalReady;
+            const sdk = paypalReady && cfg.data?.paypalClientId && !sdkOff;
+            return (
+              <>
+                {sdk && (
+                  <PayPalSdkButton clientId={cfg.data.paypalClientId} disabled={blocked} createOrder={createForSdk}
+                    onApprove={(t) => window.location.assign(`/booking/${t}?approved=1`)}
+                    onCancel={(t) => t && window.location.assign(`/booking/${t}?cancelled=1`)}
+                    onError={(e) => act.setError(`PayPal: ${e.message}`)}
+                    onUnavailable={(why) => setSdkOff(why)} />
+                )}
+                <Button className={sdk ? '' : 'btn-paypal'} style={{ width: '100%', justifyContent: 'center', minHeight: sdk ? 40 : 48 }} busy={act.busy === 'book'}
+                  disabled={blocked} onClick={book}>
+                  {sdk ? 'Or approve on the PayPal page' : 'Approve the hold with PayPal'}
+                </Button>
+              </>
+            );
+          })()}
+          <p className="faint">You approve in the PayPal sandbox{cfg.data?.paypalClientId && !sdkOff ? ' (PayPal JS SDK v6 button)' : ''} and come back here. {date(toIso(start))} → {date(toIso(end))}.</p>
           <details id="rate-card">
             <summary>Rate card: how charges are priced</summary>
             <table style={{ marginTop: 8 }}>
