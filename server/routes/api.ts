@@ -20,6 +20,7 @@ import { capReason, countUsage, queueLength } from '../ai/queue.ts';
 import { decide } from '../ai/decide.ts';
 import { suggestDeposit } from '../pricing/ratecard.ts';
 import { HELD_STATES } from '../lib/states.ts';
+import { insightsData } from '../insights.ts';
 
 export const api = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 6 * 1024 * 1024, files: 5 } });
@@ -184,6 +185,7 @@ api.get('/shop/bookings', wrap((req) => {
   };
 }));
 
+api.get('/shop/insights', wrap((req) => insightsData(req.query.real === '1')));
 api.get('/shop/bookings/:id', wrap((req) => B.bookingDetail(id(req))));
 
 const notSample = (bid: number) => {

@@ -172,3 +172,21 @@ details summary { cursor: pointer; color: var(--muted); font-size: 14px; }
 .b-sch-event.hb-tentative, .hb-tentative .b-sch-event { border-style: dashed !important; border-width: 2px !important; }
 .b-sch-range.hb-marker-honor, .b-sch-line.hb-marker-honor { border-left: 2px dashed var(--s-review); }
 .b-sch-range.hb-marker-expiry, .b-sch-line.hb-marker-expiry { border-left: 2px solid var(--s-blocked); }
+
+/* Insights (AG Studio) */
+.insights-box { height: 1180px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+.chip { border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+.chip-on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.hbw { padding: 12px 14px; height: 100%; overflow: auto; font-size: 13px; color: var(--text); display: flex; flex-direction: column; gap: 6px; }
+.hbw-title { font-weight: 600; font-size: 14px; }
+.hbw-kpis { display: flex; gap: 20px; flex-wrap: wrap; }
+.hbw-big { font-size: 26px; font-weight: 700; color: var(--accent); line-height: 1.2; }
+.hbw-big.hbw-muted, .hbw-muted { color: var(--muted); }
+.hbw-sub { color: var(--muted); font-size: 12px; }
+.hbw-spark { width: 100%; height: 44px; }
+.hbw-row { display: flex; justify-content: space-between; gap: 8px; }
+.hbw-bar { height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; margin-bottom: 2px; }
+.hbw-bar i { display: block; height: 100%; border-radius: 4px; }
+.hbw-stack { display: flex; height: 12px; border-radius: 6px; overflow: hidden; gap: 2px; }
+.hbw-stack i { display: block; height: 100%; }
+@media (max-width: 720px) { .insights-box { height: 1600px; } }

@@ -13,6 +13,7 @@ import { Evidence } from './pages/Evidence.tsx';
 import { NotFound } from './pages/NotFound.tsx';
 
 // Heavy sponsor libraries load only on their own pages.
+const Insights = lazy(() => import('./pages/Insights.tsx').then((m) => ({ default: m.Insights })));
 const Schedule = lazy(() => import('./pages/Schedule.tsx').then((m) => ({ default: m.Schedule })));
 const loading = <div className="page muted">Loading…</div>;
 
@@ -27,6 +28,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="booking/:token" element={<Booking />} />
           <Route path="shop" element={<Desk />} />
           <Route path="shop/schedule" element={<Suspense fallback={loading}><Schedule /></Suspense>} />
+          <Route path="shop/insights" element={<Suspense fallback={loading}><Insights /></Suspense>} />
           <Route path="shop/inventory" element={<Inventory />} />
           <Route path="e/:token" element={<Evidence />} />
           <Route path="*" element={<NotFound />} />
