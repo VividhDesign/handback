@@ -77,3 +77,8 @@ Testing note: the built-in browser of our coding tool blocks popups that an auto
 - The example pages did not render code in our fetch tool, so we built the custom widgets from the TypeScript typings in the package: `createWidgets({ additionalTypes, menu })`, and each widget calls `widgetApi.getData({ fields })`, which returns rows keyed by each field's `key`. This worked first time.
 - Our tuning: widget sizes are in grid tracks (24 wide, short rows), so the first layout was too small to read. About 10 min.
 - The layout is saved both from `onStateUpdated` and from `api.getState()` when the user clicks "Done editing", so a save does not depend on one event.
+
+## Non-PayPal note (Channel3), 11 Nov
+- `POST https://api.trychannel3.com/v1/search` with an `x-api-key` header and `{"query": ...}`. We confirmed the response shape with one live call before coding: `products[].offers[].price.{price, currency}` plus `availability` and `condition`.
+- Result quality depends on the query. A bare item name ("Camera drone") matched toys, so we add the item's description and show the price range and the search used next to the suggestion. Accessory medians often fall outside 0.5x to 1.5x of the list price, so our rule keeps the list price there.
+- About 15 min from key to working suggestions.

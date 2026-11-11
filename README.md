@@ -66,6 +66,12 @@ Bryntum Scheduler is used under its free trial package (`@bryntum/scheduler-tria
 
 AG Studio runs without a licence key here, so it shows a trial watermark.
 
+## Market prices (Channel3)
+
+On Inventory, "Suggest price" asks Channel3 product search for the item ([server/pricing/channel3.ts](server/pricing/channel3.ts)). It takes the cheapest new, in-stock USD offer of each of the top 10 products and uses the median as the replacement value; the deposit suggestion is 25% of that, rounded to $5, between $20 and $500. The hint shows the number of offers, the price range, the search used and the time checked, and the owner reviews it before saving.
+
+Missing accessories use the market median only when there are at least 3 offers and the median is within 0.5x to 1.5x of the shop's list price; otherwise the shop list price is used and the reason is shown. Quotes are cached for 24 hours. Without `CHANNEL3_API_KEY`, or if the call fails, Handback uses the stored prices and says so.
+
 ## Try it (judge path)
 
 The `/judge` page in the app walks through this.
