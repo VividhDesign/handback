@@ -54,7 +54,7 @@ function ItemRow({ it, onSaved }: { it: any; onSaved: () => void }) {
           {hint && (
             <div className="row small">
               <span>Suggested deposit <strong>{money(hint.depositCents)}</strong> from replacement {money(hint.replacementCents)}.</span>
-              <span className="faint">Source: {hint.source}</span>
+              <span className="faint">Source: {hint.source}{hint.market && hint.lowCents != null ? ` (range ${money(hint.lowCents)}–${money(hint.highCents)}, search "${hint.query}")` : ''}. Check it before saving.</span>
               <Button className="btn-sm" onClick={() => { setDep(dollars(hint.depositCents)); setRep(dollars(hint.replacementCents)); setHint(null); }}>Use it</Button>
             </div>
           )}

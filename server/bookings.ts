@@ -416,7 +416,7 @@ async function priceFindings(findings: any[], it: Row, acc: Row[], card: RateCar
 }
 
 /** Manual finding added by the owner (manual mode), priced from the rate card. */
-export function addManualFinding(bookingId: number, input: { type: 'new_damage' | 'missing_accessory' | 'needs_cleaning'; severity: 'minor' | 'moderate' | 'major'; description: string; accessoryId?: number }) {
+export async function addManualFinding(bookingId: number, input: { type: 'new_damage' | 'missing_accessory' | 'needs_cleaning'; severity: 'minor' | 'moderate' | 'major'; description: string; accessoryId?: number }) {
   const b = booking(bookingId);
   if (b.state !== 'needs_review') throw new HttpError(409, 'Findings can only be added while the booking needs review');
   const it = item(b.item_id);
@@ -427,7 +427,7 @@ export function addManualFinding(bookingId: number, input: { type: 'new_damage' 
     const a = accessoriesOf(it.id).find((x) => x.id === input.accessoryId);
     if (!a) throw new HttpError(400, 'Pick an accessory');
     accName = a.name;
-    p = { cents: a.list_price_cents, source: 'Shop list price (manual finding)' };
+    p = accessoryPrice(a.list_price_cents, await getQuote(a.search_query).catch(() => null));
   }
   tx(() => {
     run(`INSERT INTO findings (booking_id, type, description, severity, confidence, accessory_name, proposed_cents, price_source) VALUES (?,?,?,?,?,?,?,?)`,

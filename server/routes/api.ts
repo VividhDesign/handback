@@ -19,6 +19,7 @@ import { runPassport, runCompare, AiUnavailable } from '../ai/inspect.ts';
 import { capReason, countUsage, queueLength } from '../ai/queue.ts';
 import { decide } from '../ai/decide.ts';
 import { suggestDeposit } from '../pricing/ratecard.ts';
+import { getQuote, hasChannel3 } from '../pricing/channel3.ts';
 import { HELD_STATES } from '../lib/states.ts';
 import { insightsData } from '../insights.ts';
 
@@ -222,10 +223,10 @@ api.post('/shop/bookings/:id/return', limit('inspections', 10, DAY), wrap(async 
   return B.bookingDetail((await B.runReturn(notSample(id(req)), ip(req), { returnedAt })).id);
 }));
 
-api.post('/shop/bookings/:id/findings', wrap((req) => {
+api.post('/shop/bookings/:id/findings', wrap(async (req) => {
   const bid = notSample(id(req));
   const body = z.object({ type: z.enum(['new_damage', 'missing_accessory', 'needs_cleaning']), severity: z.enum(['minor', 'moderate', 'major']), description: z.string().trim().min(3).max(300), accessoryId: z.number().int().optional() }).parse(req.body);
-  B.addManualFinding(bid, body);
+  await B.addManualFinding(bid, body);
   return B.bookingDetail(bid);
 }));
 
@@ -266,10 +267,19 @@ api.post('/shop/items/:id', wrap((req) => {
   return B.item(it.id);
 }));
 
-api.post('/shop/items/:id/suggest', wrap((req) => {
+api.post('/shop/items/:id/suggest', wrap(async (req) => {
   const it = B.item(id(req));
-  // P1: Channel3 market median. Until it is wired, suggest from the stored replacement value and say so.
-  return { replacementCents: it.replacement_value_cents, depositCents: suggestDeposit(it.replacement_value_cents), source: 'Stored replacement value (market search not configured)' };
+  const stored = (why: string) => ({ replacementCents: it.replacement_value_cents, depositCents: suggestDeposit(it.replacement_value_cents), source: `Stored replacement value (${why})`, market: false });
+  if (!hasChannel3()) return stored('market search not configured');
+  let q;
+  // Name plus the product description searches far closer than the bare name ("Camera drone" alone finds toys).
+  const query = /photo|demo/i.test(it.description ?? '') ? it.name : `${it.name} ${it.description}`.replace(/[.]+$/, '');
+  try { q = await getQuote(query); } catch { return stored('market search failed, try again later'); }
+  if (!q || q.nOffers < 3) return stored(q ? `only ${q.nOffers} market offers found` : 'no market offers found');
+  const t = new Date(q.fetchedAt).toISOString().slice(11, 16);
+  const prices: number[] = (() => { try { return JSON.parse(get<any>('SELECT offers_json FROM price_quotes WHERE query = ?', query)?.offers_json ?? '[]'); } catch { return []; } })();
+  return { replacementCents: q.medianCents, depositCents: suggestDeposit(q.medianCents), source: `Channel3 market median of ${q.nOffers} offers, checked ${t} UTC`, market: true,
+    lowCents: prices.length ? Math.min(...prices) : null, highCents: prices.length ? Math.max(...prices) : null, query };
 }));
 
 const RateCardBody = z.object({
