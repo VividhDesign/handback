@@ -25,7 +25,7 @@ Handback turns the deposit into a PayPal **authorization hold**, photographs the
 | Orders v2: authorize | After approval the order is authorized: the money is held, nothing is charged | `server/paypal/orders.ts` |
 | Payments v2: capture with `final_capture: true` | Settlement makes exactly one capture (fee, or fee + approved charges, never above the hold); PayPal releases the rest | `server/paypal/payments.ts`, `server/bookings.ts` (`settle`) |
 | Payments v2: void | Cancel before pickup, or an expired demo hold: the whole hold is released | `server/paypal/payments.ts` |
-| Payments v2: reauthorize | Implemented; see Limitations for what the sandbox allows inside the honor period | `server/paypal/payments.ts` |
+| Payments v2: reauthorize | Called in the sandbox test run (`scripts/approval-session.ts`, branch D); PayPal answers `REAUTHORIZATION_TOO_SOON` inside the 3-day honor period. There is no in-app reauthorize button: a booking is at most 7 days, well inside the 29-day authorization | `server/paypal/payments.ts` |
 | Payments v2: refund, via the **PayPal Agent Toolkit** `create_refund` tool | Contest resolution refunds part or all of the captured charges (never the rental fee). The agent recommends; the owner decides; code builds the tool call with a `PayPal-Request-Id`, so a retry returns the same refund | `server/paypal/toolkit.ts`, `server/agent/contest.ts` |
 | Webhooks + signature verification | Every event is verified with `verify-webhook-signature`, stored once by event id, and shown in the live ledger | `server/paypal/webhooks.ts`, `server/sync.ts` |
 | Invoicing via the **PayPal Agent Toolkit** (`@paypal/agent-toolkit`, tools `create_invoice` + `send_invoice`) | Approved charges above the hold: the agent drafts an invoice with the evidence link; it is sent only after the owner's click. The tool arguments are built by code from the approved amount, never by the model. One invoice per booking | `server/paypal/toolkit.ts`, `server/agent/invoice.ts` |
@@ -71,6 +71,16 @@ AG Studio runs without a licence key here, so it shows a trial watermark.
 On Inventory, "Suggest price" asks Channel3 product search for the item ([server/pricing/channel3.ts](server/pricing/channel3.ts)). It takes the cheapest new, in-stock USD offer of each of the top 10 products and uses the median as the replacement value; the deposit suggestion is 25% of that, rounded to $5, between $20 and $500. The hint shows the number of offers, the price range, the search used and the time checked, and the owner reviews it before saving.
 
 Missing accessories use the market median only when there are at least 3 offers and the median is within 0.5x to 1.5x of the shop's list price; otherwise the shop list price is used and the reason is shown. Quotes are cached for 24 hours. Without `CHANNEL3_API_KEY`, or if the call fails, Handback uses the stored prices and says so.
+
+## Shop assistant
+
+Every shop page has an "Ask the assistant" drawer ([server/agent/assistant.ts](server/agent/assistant.ts), [client/src/components/Assistant.tsx](client/src/components/Assistant.tsx)). It is Gemini function calling over two kinds of tools:
+
+- **Our tools:** `find_bookings`, `get_booking`, `move_booking` (the same payment-aware check as a Schedule drag, logged with actor `agent`), `quote_accessory` (Channel3).
+- **PayPal Agent Toolkit reads:** `get_order`, `list_transactions`, `list_disputes`, `get_merchant_insights`.
+- **Money actions need a click:** `propose_refund` and `propose_invoice` only return a confirm card. Clicking Confirm runs the same code as the Desk buttons: the refund goes through the Agent Toolkit `create_refund` tool, bounded by the captured charges, and the invoice through `create_invoice` + `send_invoice`. The model never sets the amount that moves.
+
+Limits: 30 messages per IP per day, and it counts toward the global daily AI cap. Without an AI key the drawer says so and the rest of the app works.
 
 ## Try it (judge path)
 
@@ -118,7 +128,7 @@ Data model (SQLite, `server/schema.sql`): `items`, `accessories`, `bookings` (st
 - One shop and no login: the shop console is open so judges can use it. Production needs shop login and roles.
 - AI can miss damage or over-report it. That is why every charge needs a human, and why the customer sees the evidence.
 - How fast a released hold shows on a real card depends on the card issuer.
-- A reauthorize success cannot be shown inside PayPal's 3-day honor period; the call is implemented and its sandbox answer is handled.
+- A reauthorize success cannot be shown inside PayPal's 3-day honor period. The call is tested in the sandbox script only; the app has no reauthorize button or hold keeper.
 - Free-tier AI limits apply. Cached AI results, sample history and dry runs are labelled in the UI.
 
 ## Production path

@@ -82,3 +82,9 @@ Testing note: the built-in browser of our coding tool blocks popups that an auto
 - `POST https://api.trychannel3.com/v1/search` with an `x-api-key` header and `{"query": ...}`. We confirmed the response shape with one live call before coding: `products[].offers[].price.{price, currency}` plus `availability` and `condition`.
 - Result quality depends on the query. A bare item name ("Camera drone") matched toys, so we add the item's description and show the price range and the search used next to the suggestion. Accessory medians often fall outside 0.5x to 1.5x of the list price, so our rule keeps the list price there.
 - About 15 min from key to working suggestions.
+
+## Agent Toolkit in the shop assistant, 11 Nov
+- We call toolkit tools from our own Gemini function-calling loop instead of handing the toolkit's tool list to the model. The toolkit's JSON schemas use `anyOf` with `{"not": {}}` and `null` (for example `list_transactions.transaction_id`), which Gemini function declarations do not accept, so we declare small wrappers and build the toolkit arguments in code.
+- `list_transactions` in the sandbox did not show our most recent sandbox payments (the Transaction Search API is not real time), so the tool description tells the model that sandbox data can lag.
+- Enabling read tools is one line per action group (`orders.get`, `transactions.list`, `disputes.list`, `insights.get`). About 20 min to wire four reads.
+
