@@ -1,6 +1,8 @@
-import { NavLink, Link, Outlet } from 'react-router-dom';
+import { NavLink, Link, Outlet, useLocation } from 'react-router-dom';
+import { Assistant } from './Assistant.tsx';
 
 export function Layout() {
+  const shop = useLocation().pathname.startsWith('/shop');
   return (
     <>
       <div className="banner">Sandbox demo. No real money.</div>
@@ -20,6 +22,7 @@ export function Layout() {
       <main>
         <Outlet />
       </main>
+      {shop && <Assistant />}
     </>
   );
 }

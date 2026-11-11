@@ -7,7 +7,15 @@ import { env } from '../env.ts';
  * definitions plus `handleToolCall`, which runs the tool against PayPal. The toolkit has no
  * authorize, capture or void tools, so those stay direct REST (server/paypal/payments.ts).
  */
-const ACTIONS = { invoices: { create: true, send: true, get: true }, payments: { createRefund: true, getRefunds: true } };
+// Writes: invoices and refunds (always built by code after an owner click). Reads: for the shop assistant.
+const ACTIONS = {
+  invoices: { create: true, send: true, get: true },
+  payments: { createRefund: true, getRefunds: true },
+  orders: { get: true },
+  transactions: { list: true },
+  disputes: { list: true },
+  insights: { get: true },
+};
 let tk: PayPalAgentToolkit | null = null;
 
 /**

@@ -12,6 +12,7 @@ import { fmt } from '../lib/money.ts';
 import * as B from '../bookings.ts';
 import { openContest, resolveContest } from '../agent/contest.ts';
 import { draftExcessInvoice } from '../agent/invoice.ts';
+import { chat as assistantChat, confirm as assistantConfirm } from '../agent/assistant.ts';
 import { handleWebhook } from '../sync.ts';
 import { processPhoto } from '../checks/photos.ts';
 import { runReturnChecks } from '../checks/deterministic.ts';
@@ -242,6 +243,16 @@ api.post('/shop/contests/:id/resolve', wrap(async (req) => {
   const body = z.object({ action: z.enum(['uphold', 'partial', 'deny']), refundCents: z.number().int().min(0).optional(), note: z.string().max(300).optional() }).parse(req.body);
   return B.bookingDetail((await resolveContest(id(req), body)).id);
 }));
+
+api.post('/assistant/chat', limit('assistant', 30, DAY), wrap(async (req) => {
+  const { messages } = z.object({ messages: z.array(z.object({ role: z.enum(['user', 'assistant']), text: z.string().max(2000) })).min(1).max(30) }).parse(req.body);
+  const why = capReason(ip(req), false);
+  if (why) return { reply: `The assistant is paused: ${why}. The rest of the Desk still works.`, cards: [], tools: [] };
+  countUsage(ip(req), 'call');
+  return assistantChat(messages);
+}));
+
+api.post('/assistant/confirm', wrap(async (req) => assistantConfirm(z.object({ id: z.string().uuid() }).parse(req.body).id)));
 
 api.post('/shop/bookings/:id/excess-invoice', wrap(async (req) => {
   const { confirm } = z.object({ confirm: z.boolean().optional() }).parse(req.body ?? {});
